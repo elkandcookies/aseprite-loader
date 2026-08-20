@@ -41,6 +41,11 @@ pub struct PropertiesMap<'a> {
 }
 
 #[derive(Debug)]
+pub struct NestedPropertiesMap<'a> {
+    pub properties: Vec<Property<'a>>,
+}
+
+#[derive(Debug)]
 pub struct Property<'a> {
     pub name: &'a str,
     pub value: Value<'a>,
@@ -66,7 +71,7 @@ pub enum PropertyType {
     Size = 0x000F,
     Rect = 0x0010,
     Vector = 0x0011,
-    PropertiesMap = 0x0012,
+    NestedPropertiesMap = 0x0012,
     Uuid = 0x0013,
 }
 
@@ -91,6 +96,7 @@ pub enum Value<'a> {
     Vector(Vector<'a>),
     MixedVector(Vec<Value<'a>>),
     PropertiesMap(PropertiesMap<'a>),
+    NestedPropertiesMap(Vec<Property<'a>>),
     Uuid(Uuid),
 }
 
@@ -114,7 +120,7 @@ pub enum Vector<'a> {
     Size(Vec<Size>),
     Rect(Vec<Rect>),
     Vector(Vec<Vector<'a>>),
-    PropertiesMap(Vec<PropertiesMap<'a>>),
+    NestedPropertiesMap(Vec<Vec<Property<'a>>>),
     Uuid(Vec<Uuid>),
 }
 
@@ -165,6 +171,12 @@ pub fn parse_properties_map(input: &[u8]) -> ParseResult<'_, PropertiesMap<'_>> 
     ))
 }
 
+pub fn parse_nested_properties_map(input: &[u8]) -> ParseResult<'_, Vec<Property<'_>>> {
+    let (input, num_props) = parse_dword_as_usize(input)?;
+    let (input, properties) = count(parse_property, num_props).parse(input)?;
+    Ok((input, properties))
+}
+
 pub fn parse_property(input: &[u8]) -> ParseResult<'_, Property<'_>> {
     let (input, name) = parse_string(input)?;
     let (input, value) = parse_value(input)?;
@@ -194,8 +206,8 @@ pub fn parse_value(input: &[u8]) -> ParseResult<'_, Value<'_>> {
         PropertyType::Size => map(parse_size, Value::Size).parse(input)?,
         PropertyType::Rect => map(parse_rect, Value::Rect).parse(input)?,
         PropertyType::Vector => map(parse_vector, Value::Vector).parse(input)?,
-        PropertyType::PropertiesMap => {
-            map(parse_properties_map, Value::PropertiesMap).parse(input)?
+        PropertyType::NestedPropertiesMap => {
+            map(parse_nested_properties_map, Value::NestedPropertiesMap).parse(input)?
         }
         PropertyType::Uuid => map(parse_uuid, Value::Uuid).parse(input)?,
     })
@@ -234,9 +246,9 @@ pub fn parse_vector(input: &[u8]) -> ParseResult<'_, Vector<'_>> {
         PropertyType::Vector => {
             map(count(parse_vector, len_elements), Vector::Vector).parse(input)?
         }
-        PropertyType::PropertiesMap => map(
-            count(parse_properties_map, len_elements),
-            Vector::PropertiesMap,
+        PropertyType::NestedPropertiesMap => map(
+            count(parse_nested_properties_map, len_elements),
+            Vector::NestedPropertiesMap,
         )
         .parse(input)?,
         PropertyType::Uuid => map(count(parse_uuid, len_elements), Vector::Uuid).parse(input)?,

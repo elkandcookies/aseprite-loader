@@ -214,3 +214,43 @@ fn test_user_data() {
         };
     }
 }
+
+#[test]
+fn test_user_data_nested_properties() {
+    let input = std::fs::read("./tests/user_data_nested_props.aseprite").unwrap();
+    let file = parse_file(&input).unwrap();
+
+    assert!(
+        &file.tags[0].user_data.is_some(),
+        "Expected user data chunk to exist, but found none"
+    );
+    let user_data_chunk = file.tags[0].user_data.as_ref().unwrap();
+    assert!(
+        user_data_chunk.properties_maps.as_ref().is_some(),
+        "User data chunk missing property maps"
+    );
+    let root_properties = user_data_chunk.properties_maps.as_ref().unwrap();
+    assert!(
+        root_properties.is_ok(),
+        "User data parse error: {}",
+        root_properties.as_ref().unwrap_err()
+    );
+    let (_, props) = root_properties.as_ref().unwrap();
+    assert!(!props.is_empty(), "No properties found in user data block");
+    assert!(
+        matches!(
+            props[0].properties[0].value,
+            crate::binary::chunks::user_data::Value::NestedPropertiesMap { .. }
+        ),
+        "Couldn't find a nested property map"
+    );
+    if let crate::binary::chunks::user_data::Value::NestedPropertiesMap(items) =
+        &props[0].properties[0].value
+    {
+        assert_eq!(
+            items.len(),
+            2,
+            "Nested property list contained wrong number of items"
+        );
+    };
+}

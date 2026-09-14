@@ -40,10 +40,7 @@ pub struct PropertiesMap<'a> {
     pub extension_entry_id: Dword,
 }
 
-#[derive(Debug)]
-pub struct NestedPropertiesMap<'a> {
-    pub properties: Vec<Property<'a>>,
-}
+type NestedPropertiesMap<'a> = Vec<Property<'a>>;
 
 #[derive(Debug)]
 pub struct Property<'a> {
@@ -96,7 +93,7 @@ pub enum Value<'a> {
     Vector(Vector<'a>),
     MixedVector(Vec<Value<'a>>),
     PropertiesMap(PropertiesMap<'a>),
-    NestedPropertiesMap(Vec<Property<'a>>),
+    NestedPropertiesMap(NestedPropertiesMap<'a>),
     Uuid(Uuid),
 }
 
@@ -120,7 +117,7 @@ pub enum Vector<'a> {
     Size(Vec<Size>),
     Rect(Vec<Rect>),
     Vector(Vec<Vector<'a>>),
-    NestedPropertiesMap(Vec<Vec<Property<'a>>>),
+    NestedPropertiesMap(Vec<NestedPropertiesMap<'a>>),
     Uuid(Vec<Uuid>),
 }
 
